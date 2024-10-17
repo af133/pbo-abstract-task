@@ -1,0 +1,322 @@
+using System;
+using System.Collections.Generic;
+
+abstract class Robot
+{
+    public string nama;
+    public int energi, armor, serangan;
+
+    public Robot(string nama, int energi, int armor, int serangan)
+    {
+        this.nama = nama;
+        this.energi = energi;
+        this.armor = armor;
+        this.serangan = serangan;
+    }
+
+    public abstract void Serang(Robot target);
+    public abstract void Gunakan_Kemampuan();
+    public abstract void Cetak_Informasi();
+
+    protected int HitungKerusakan(int attack, Robot target)
+    {
+        int damage = attack - target.armor / 10;
+        return Math.Max(damage, 0);
+    }
+}
+
+class Robot_Kita : Robot, IKemampuan
+{
+    public int level = 1;
+    private int specialAbilityUses = 3;
+    private bool electricAttackUsed = false;
+    private Robot currentTarget;
+
+    public Robot_Kita(string nama) : base(nama, 100, 100, 50) { }
+
+    public override void Serang(Robot target)
+    {
+        currentTarget = target;
+        int damage = HitungKerusakan(serangan, target);
+        target.energi -= damage;
+        Console.WriteLine($"{nama} menyerang {target.nama} dengan kerusakan {damage}.");
+    }
+
+    public override void Gunakan_Kemampuan()
+    {
+        if (specialAbilityUses <= 0)
+        {
+            Console.WriteLine("Kemampuan khusus sudah habis.");
+            return;
+        }
+
+        Console.WriteLine("Pilih kemampuan:");
+        if (level >= 7)
+        {
+            Console.WriteLine("[1] Perbaikan, [2] Serangan Listrik, [3] Serangan Plasma, [4] Pertahanan Super");
+        }
+        else if (level >= 5)
+        {
+            Console.WriteLine("[1] Perbaikan, [2] Serangan Listrik, [3] Serangan Plasma");
+        }
+        else if (level >= 4)
+        {
+            Console.WriteLine("[1] Perbaikan, [2] Serangan Listrik");
+        }
+        else if (level >= 2)
+        {
+            Console.WriteLine("[1] Perbaikan");
+        }
+        else
+        {
+            Console.WriteLine("Tidak ada kemampuan yang tersedia.");
+            return;
+        }
+
+        if (!int.TryParse(Console.ReadLine(), out int pilihan))
+        {
+            Console.WriteLine("Input tidak valid.");
+            return;
+        }
+
+        switch (pilihan)
+        {
+            case 1:
+                Perbaikan();
+                break;
+            case 2:
+                if (level >= 4)
+                {
+                    SeranganListrik();
+                    electricAttackUsed = true;
+                }
+                break;
+            case 3:
+                if (level >= 5)
+                {
+                    SeranganPlasma();
+                }
+                break;
+            case 4:
+                if (level >= 7)
+                {
+                    PertahananSuper();
+                }
+                break;
+            default:
+                Console.WriteLine("Pilihan tidak valid.");
+                return;
+        }
+
+        specialAbilityUses--;
+    }
+
+    public override void Cetak_Informasi()
+    {
+        Console.WriteLine($"Nama: {nama}\nEnergi: {energi}\nArmor: {armor}\nSerangan: {serangan}\nLevel: {level}");
+    }
+
+    public void Perbaikan()
+    {
+        energi += 20;
+        Console.WriteLine($"{nama} melakukan perbaikan. Energi meningkat menjadi {energi}.");
+    }
+
+    public void SeranganListrik()
+    {
+        if (currentTarget == null)
+        {
+            Console.WriteLine("Tidak ada target untuk serangan listrik.");
+            return;
+        }
+        int damage = HitungKerusakan(serangan * 2, currentTarget);
+        currentTarget.energi -= damage;
+        Console.WriteLine($"{nama} menggunakan Serangan Listrik. {currentTarget.nama} menerima kerusakan {damage} dan serangannya tertunda.");
+    }
+
+    public void SeranganPlasma()
+    {
+        if (currentTarget == null)
+        {
+            Console.WriteLine("Tidak ada target untuk serangan plasma.");
+            return;
+        }
+        int damage = HitungKerusakan(serangan * 4, currentTarget);
+        currentTarget.energi -= damage;
+        Console.WriteLine($"{nama} menggunakan Serangan Plasma. {currentTarget.nama} menerima kerusakan {damage}.");
+    }
+
+    public void PertahananSuper()
+    {
+        armor *= 3;
+        Console.WriteLine($"{nama} menggunakan Pertahanan Super. Armor meningkat menjadi {armor}.");
+    }
+
+    public bool SkipEnemyTurn()
+    {
+        if (electricAttackUsed)
+        {
+            electricAttackUsed = false;
+            return true;
+        }
+        return false;
+    }
+
+    public void LevelUp()
+    {
+        level++;
+        energi = 100;
+        Console.WriteLine($"{nama} naik level ke {level}! Energi direset menjadi {energi}.");
+    }
+}
+
+class Robot_Musuh : Robot, IKemampuan
+{
+    private Random rand = new Random();
+    private Robot currentTarget; 
+
+    public Robot_Musuh(string nama, int energi, int armor, int serangan) : base(nama, energi, armor, serangan) { }
+
+    public override void Serang(Robot target)
+    {
+        currentTarget = target;
+        int damage = HitungKerusakan(serangan, target);
+        target.energi -= damage;
+        Console.WriteLine($"{nama} menyerang {target.nama} dengan kerusakan {damage}.");
+    }
+
+    public override void Gunakan_Kemampuan()
+    {
+        if (currentTarget == null)
+        {
+            Console.WriteLine("Tidak ada target untuk menggunakan kemampuan.");
+            return;
+        }
+
+        int kemampuan = rand.Next(1, 5);
+        switch (kemampuan)
+        {
+            case 1:
+                Perbaikan();
+                break;
+            case 2:
+                SeranganListrik();
+                break;
+            case 3:
+                SeranganPlasma();
+                break;
+            case 4:
+                PertahananSuper();
+                break;
+        }
+    }
+
+    public override void Cetak_Informasi()
+    {
+        Console.WriteLine($"Nama: {nama}\nEnergi: {energi}\nArmor: {armor}\nSerangan: {serangan}");
+    }
+
+    public void Perbaikan()
+    {
+        energi += 20;
+        Console.WriteLine($"{nama} melakukan perbaikan. Energi meningkat menjadi {energi}.");
+    }
+
+    public void SeranganListrik()
+    {
+        if (currentTarget == null)
+        {
+            Console.WriteLine("Tidak ada target untuk serangan listrik.");
+            return;
+        }
+        int damage = HitungKerusakan(serangan * 2, currentTarget);
+        currentTarget.energi -= damage;
+        Console.WriteLine($"{nama} menggunakan Serangan Listrik. {currentTarget.nama} menerima kerusakan {damage}.");
+    }
+
+    public void SeranganPlasma()
+    {
+        if (currentTarget == null)
+        {
+            Console.WriteLine("Tidak ada target untuk serangan plasma.");
+            return;
+        }
+        int damage = HitungKerusakan(serangan * 4, currentTarget);
+        currentTarget.energi -= damage;
+        Console.WriteLine($"{nama} menggunakan Serangan Plasma. {currentTarget.nama} menerima kerusakan {damage}.");
+    }
+
+    public void PertahananSuper()
+    {
+        armor *= 3;
+        Console.WriteLine($"{nama} menggunakan Pertahanan Super. Armor meningkat menjadi {armor}.");
+    }
+}
+
+public interface IKemampuan
+{
+    void Perbaikan();
+    void SeranganListrik();
+    void SeranganPlasma();
+    void PertahananSuper();
+}
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        Console.WriteLine("Masukkan nama robot Anda:");
+        string playerRobotName = Console.ReadLine();
+        Robot_Kita playerRobot = new Robot_Kita(playerRobotName);
+        List<Robot_Musuh> enemyRobots = new List<Robot_Musuh>
+        {
+            new Robot_Musuh("Robot Musuh 1", 80, 20, 30),
+            new Robot_Musuh("Robot Musuh 2", 90, 25, 40),
+            new Robot_Musuh("Robot Musuh 3", 100, 30, 50)
+        };
+
+        foreach (var enemy in enemyRobots)
+        {
+            Console.WriteLine($"\nPertarungan melawan {enemy.nama} dimulai!");
+            while (playerRobot.energi > 0 && enemy.energi > 0)
+            {
+                playerRobot.Cetak_Informasi();
+                enemy.Cetak_Informasi();
+
+                Console.WriteLine("Giliran Anda! Apa yang ingin Anda lakukan?");
+                Console.WriteLine("[1] Serang, [2] Gunakan Kemampuan");
+                int action = int.Parse(Console.ReadLine());
+
+                if (action == 1)
+                {
+                    playerRobot.Serang(enemy);
+                }
+                else if (action == 2)
+                {
+                    playerRobot.Gunakan_Kemampuan();
+                }
+
+                if (enemy.energi > 0)
+                {
+                    if (!playerRobot.SkipEnemyTurn())
+                    {
+                        enemy.Serang(playerRobot);
+                    }
+                }
+            }
+
+            if (playerRobot.energi <= 0)
+            {
+                Console.WriteLine($"{playerRobot.nama} kalah!");
+                break;
+            }
+            else if (enemy.energi <= 0)
+            {
+                Console.WriteLine($"{enemy.nama} kalah!");
+                playerRobot.LevelUp();
+            }
+        }
+
+        Console.WriteLine("Pertarungan selesai.");
+    }
+}
